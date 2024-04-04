@@ -14,7 +14,7 @@ def connect_mysql():
     except Error as e:
             print("Error while connecting to MySQL", e)  
 
-            
+             
             
 def login():
     connection = connect_mysql()  # MySQL에 연결
@@ -45,36 +45,57 @@ def login():
 
 def user_page(connection):
         if connection.is_connected():
-            cursor = connection.cursor()
             user_window = tk.Tk()
             user_window.title("사용자 페이지")
+
+            open_word = tk.Button(user_window, text = "단어 공부하기", command=lambda: select_day(connection))
+            open_word.pack()
+            open_quiz = tk.Button(user_window, text="문제 풀기")
+            open_quiz.pack()
+
+    
+          
+def select_day(connection):
+     if connection.is_connected():
+            cursor = connection.cursor()
+            day_window = tk.Tk()
+            day_window.title("Day 선택")
             # 단어 조회
             cursor.execute("SELECT Day FROM toeicword")
 
             days = cursor.fetchall()
             for day in enumerate(days):
-                day_button = tk.Button(user_window, text=f"Day {day[0]+1}", command=lambda day=day[0]+1: list_words(day, connection))
+                day_button = tk.Button(day_window, text=f"Day {day[0]+1}", command=lambda day=day[0]+1: list_words(day, connection))
                 day_button.pack()
-    
-          
-
-
             
 def list_words(day, connection):
-
         if connection.is_connected():
             cursor = connection.cursor()
-
             # 단어 조회
-            cursor.execute("SELECT Spell, Mean FROM toeicword WHERE Day = %s", (day,))
-            words = cursor.fetchall()
-
+            cursor.execute("SELECT Spell, Mean FROM toeicword WHERE Day = %s and Difficulty = '상'", (day,))
+            words_hard = cursor.fetchall()
+            cursor.execute("SELECT Spell, Mean FROM toeicword WHERE Day = %s and Difficulty = '중'", (day,))
+            words_normal = cursor.fetchall()
+            cursor.execute("SELECT Spell, Mean FROM toeicword WHERE Day = %s and Difficulty = '하'", (day,))
+            words_easy = cursor.fetchall()
             # 화면에 출력
             word_window = tk.Tk()
             word_window.title("단어 페이지")
-        for index, word in enumerate(words):
-                    spell_label = tk.Label(word_window, text=f"{index+1}. {word[0]} - {word[1]}")
-                    spell_label.pack()
+            spell_hard_label = tk.Label(word_window, text="상")
+            spell_hard_label.pack()
+            for index, word in enumerate(words_hard):
+                        spell_label = tk.Label(word_window, text=f"{index+1}. {word[0]} - {word[1]}")
+                        spell_label.pack()
+            spell_normal_label = tk.Label(word_window, text="중")
+            spell_normal_label.pack()
+            for index, word in enumerate(words_normal):
+                        spell_label = tk.Label(word_window, text=f"{index+1}. {word[0]} - {word[1]}")
+                        spell_label.pack()
+            spell_easy_label = tk.Label(word_window, text="하")
+            spell_easy_label.pack()
+            for index, word in enumerate(words_easy):
+                        spell_label = tk.Label(word_window, text=f"{index+1}. {word[0]} - {word[1]}")
+                        spell_label.pack()
 
 def admin_page(connection):
         if connection.is_connected():
@@ -97,13 +118,13 @@ root = tk.Tk()
 root.title("로그인")
 
 # 라벨 스타일
-label_style = {'font': ('Helvetica', 12), 'padx': 10, 'pady': 5}
+label_style = {'font': ('Helvetica', 12), 'padx': 10, 'pady': 5, 'bg': '#f0f0f0'}
 
 # 입력 필드 스타일
-entry_style = {'font': ('Helvetica', 12), 'width': 20}
+entry_style = {'font': ('Helvetica', 12), 'width': 20, 'bg': '#e0e0e0', 'fg': '#333333', 'borderwidth': 2, 'relief': 'groove'}
 
 # 로그인 버튼 스타일
-button_style = {'font': ('Helvetica', 12), 'width': 15, 'pady': 5}
+button_style = {'font': ('Helvetica', 12), 'width': 15, 'pady': 5, 'bg': '#4caf50', 'fg': 'white'}
 
 # 사용자 이름 라벨 및 입력 필드
 username_label = tk.Label(root, text="아이디:", **label_style)
