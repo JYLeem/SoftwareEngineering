@@ -1,7 +1,6 @@
 import mysql.connector
 from mysql.connector import Error
-from tkinter import Tk, Canvas
-from tkinter import messagebox
+from tkinter import Tk, Canvas, messagebox
 import tkinter as tk
 import subprocess
 
@@ -32,6 +31,7 @@ def login():
 
             if admin_user:
                 messagebox.showinfo("로그인 성공", "관리자로 로그인 성공!")
+                go_admin()
                 
             else:
                 # admin 테이블에 사용자가 없으면 users 테이블에서 조회
@@ -43,8 +43,10 @@ def login():
                     messagebox.showerror("로그인 실패", "로그인 실패. 사용자 이름 또는 비밀번호를 확인하세요.")
 def go_signup():
     window.destroy()
-    subprocess.run(['python', 'signup.py'])
-
+    subprocess.run(['python', 'SignUpPage.py'])
+def go_admin():
+    window.destroy()
+    subprocess.run(['python', 'AdminPage_select.py'])
 
 window = Tk()
 
