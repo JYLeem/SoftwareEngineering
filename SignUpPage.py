@@ -26,6 +26,9 @@ def CheckIDExistence():
     connection = ConnectMysql()
     if connection:
         id = IDEntry.get()
+        if len(id) == 0:
+            messagebox.showinfo("아이디 미기입", "아이디가 입력되지 않았습니다.")
+            return
         cursor = connection.cursor()
         cursor.execute("SELECT id FROM user WHERE id=%s", (id,))
         IDExistence = cursor.fetchall()
@@ -39,6 +42,9 @@ def CheckNicknameExistence():
     connection = ConnectMysql()
     if connection:
         nickname = NicknameEntry.get()
+        if len(nickname) == 0:
+            messagebox.showinfo("닉네임 미기입", "닉네임이 입력되지 않았습니다.")
+            return
         cursor = connection.cursor()
         cursor.execute("SELECT nickname FROM user WHERE id=%s", (nickname,))
         NicknameExistence = cursor.fetchall()
@@ -62,7 +68,7 @@ def SignUp():
         messagebox.showinfo("회원가입 성공", "회원가입이 완료되었습니다.")
         GoLoginPage()
 window = Tk()
-
+window.title("회원가입")
 window.geometry("747x531")
 window.configure(bg = "#FFFFFF")
 
