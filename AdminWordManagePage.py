@@ -5,16 +5,9 @@ from tkinter import Tk, Canvas, messagebox, Frame
 import tkinter as tk
 import sys
 import subprocess
-def ConnectMysql():
-    try:
-        connection = mysql.connector.connect(host='ystdb.cl260eouqhjz.ap-northeast-2.rds.amazonaws.com',
-                                                database='wordbook',
-                                                user='admin',
-                                                password='seat0323')
-        if connection.is_connected():
-            return connection
-    except Error as e:
-            print("Error while connecting to MySQL", e)  
+from Util import Util
+
+connection = Util.ConnectMysql()
 
 def ListEntireWords(window):
     # 기존 버튼 제거
@@ -26,8 +19,6 @@ def ListEntireWords(window):
     MeanButtons.clear()
     DiffiButtons.clear()
 
-   
-    connection = ConnectMysql()
     if connection:
         cursor = connection.cursor()
         cursor.execute("SELECT word_id, Spell, Mean, Difficulty FROM toeicword")  # id만 가져오도록 수정
@@ -53,6 +44,7 @@ def ListEntireWords(window):
                 SpellButtons.append(SpellButton)
                 MeanButtons.append(MeanButton)
                 DiffiButtons.append(DiffiButton)
+                
 
 def ListSpecificWords(window):
     # 기존 버튼 제거
@@ -72,7 +64,6 @@ def ListSpecificWords(window):
         
         yGap = 30
         yPos = 44
-        connection = ConnectMysql()
         if connection:
             cursor = connection.cursor()
             cursor.execute("SELECT word_id, Spell, Mean, Difficulty FROM toeicword WHERE Spell LIKE %s", ('%' + SearchWord + '%',))
@@ -81,7 +72,6 @@ def ListSpecificWords(window):
                 SpellButton = tk.Button(window, text=f"{WordInfo[1]}", command=lambda i=index: WordButtonClick(i))
                 MeanButton = tk.Button(window, text=f"{WordInfo[2]}", command=lambda i=index: WordButtonClick(i))
                 DiffiButton = tk.Button(window, text=f"{WordInfo[3]}", command=lambda i=index: WordButtonClick(i))
-                
                 
                 SpellButton.pack()
                 SpellButton.place(x=393, y=yPos, width=111, height=30)
@@ -98,7 +88,6 @@ def ListSpecificWords(window):
                 DiffiButtons.append(DiffiButton)
                 
 def InsertWord(adminID):
-    connection = ConnectMysql()
     spell = SpellInput.get()
     mean = MeanInput.get()
     difficulty = DifficultyInput.get()
@@ -111,10 +100,8 @@ def InsertWord(adminID):
         cursor.execute("INSERT INTO history(admin, log, changetime) VALUES (%s, %s, %s)", (adminID, message, now))
         connection.commit()
         cursor.close()  # 커서 닫기
-        connection.close()  # 커넥션 닫기   
         messagebox.showinfo("단어 추가 성공", "단어가 성공적으로 추가되었습니다.")
 def DeleteWord():
-    connection = ConnectMysql()
     spell = SpellInput.get()
     mean = MeanInput.get()
     difficulty = DifficultyInput.get()
@@ -125,11 +112,16 @@ def DeleteWord():
         cursor.execute("DELETE FROM toeicword WHERE Spell = %s AND Mean = %s AND Difficulty = %s", (spell, mean, difficulty))
         cursor.execute("INSERT INTO history(admin, log, changetime) VALUES (%s, %s, %s)", (adminID, message, now))
         connection.commit()  # 커밋을 수행하여 변경 사항을 DB에 적용
-        cursor.close()  # 커서 닫기
-        connection.close()  # 커넥션 닫기   
+        cursor.close()  # 커서 닫기  
         messagebox.showinfo("단어 삭제 성공", "단어가 성공적으로 삭제되었습니다.")
+        SearchWordInput.delete(0, tk.END)
+        SpellInput.delete(0,tk.END)
+        MeanInput.delete(0,tk.END)
+        DifficultyInput.delete(0,tk.END)
+        for i in range(3):
+                    PrevInfos.pop()
+        
 def UpdateWord():
-    connection = ConnectMysql()
     spell = SpellInput.get()
     mean = MeanInput.get()
     difficulty = DifficultyInput.get()
@@ -141,8 +133,14 @@ def UpdateWord():
         cursor.execute("INSERT INTO history(admin, log, changetime) VALUES (%s, %s, %s)", (adminID, message, now))
         connection.commit()  # 커밋을 수행하여 변경 사항을 DB에 적용
         cursor.close()  # 커서 닫기
-        connection.close()  # 커넥션 닫기   
-        messagebox.showinfo("단어 수정 성공", "단어가 성공적으로 수정되었습니다.")        
+        
+        messagebox.showinfo("단어 수정 성공", "단어가 성공적으로 수정되었습니다.")
+        SearchWordInput.delete(0,tk.END)
+        SpellInput.delete(0,tk.END)
+        MeanInput.delete(0,tk.END)
+        DifficultyInput.delete(0,tk.END)        
+        for i in range(3):
+                    PrevInfos.pop()
 def WordButtonClick(index):
     for i in range(len(SpellButtons)):  # 모든 행에 대해 반복
         if i == index:  # 현재 클릭된 버튼과 같은 행의 버튼들만
@@ -165,9 +163,7 @@ def WordButtonClick(index):
             SpellButtons[i].configure(bg="SystemButtonFace")  # 다른 행의 버튼은 기본 색상으로 변경
             MeanButtons[i].configure(bg="SystemButtonFace")
             DiffiButtons[i].configure(bg="SystemButtonFace")
-def GoAdminStatusPage(adminID):
-    window.destroy()
-    subprocess.run(['python', 'AdminStatusPage.py',adminID])
+        
 
 PrevInfos=[]
 
@@ -180,9 +176,7 @@ window.title("단어 관리 페이지")
 window.geometry("747x531")
 window.configure(bg = "#FFFFFF")
 
-adminID = "pjy"
-
-frame = Frame(window)
+adminID = sys.argv[1]
 
 canvas = Canvas(
     window,
@@ -213,7 +207,7 @@ DeleteWordBtn.place(x=37, y=361, width=90, height=40)
 InsertWordBtn = tk.Button(text="단어 추가", command=lambda:InsertWord(adminID))
 InsertWordBtn.place(x=249, y=361, width=90, height=40)
 
-GoHomeBtn = tk.Button(text="이전으로", command=lambda:GoAdminStatusPage(adminID))
+GoHomeBtn = tk.Button(text="이전으로", command=lambda:Util.SwitchPage(window, "AdminMainPage", adminID))
 GoHomeBtn.place(x=15, y=483, width=90, height=40)
 
 
