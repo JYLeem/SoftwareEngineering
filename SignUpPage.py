@@ -4,42 +4,12 @@ from mysql.connector import Error
 from tkinter import Tk, Canvas, Entry, Text, Button, PhotoImage
 from tkinter import messagebox
 import tkinter as tk
+from Util import Util
 
-
-def ConnectMysql():
-    try:
-        connection = mysql.connector.connect(host='ystdb.cl260eouqhjz.ap-northeast-2.rds.amazonaws.com',
-                                                database='wordbook',
-                                                user='admin',
-                                                password='seat0323')
-        if connection.is_connected():
-            return connection
-    except Error as e:
-            print("Error while connecting to MySQL", e)  
-
-
-def GoLoginPage():
-    window.destroy()
-    subprocess.run(['python', 'LoginPage.py'])           
-
-def CheckIDExistence():
-    connection = ConnectMysql()
-    if connection:
-        id = IDEntry.get()
-        if len(id) == 0:
-            messagebox.showinfo("아이디 미기입", "아이디가 입력되지 않았습니다.")
-            return
-        cursor = connection.cursor()
-        cursor.execute("SELECT id FROM user WHERE id=%s", (id,))
-        IDExistence = cursor.fetchall()
-        if IDExistence:
-                messagebox.showinfo("아이디 중복", "이미 존재하는 아이디가 있습니다.")
-                
-        else:
-                messagebox.showinfo("아이디 생성 가능", "사용 가능한 아이디 입니다.")
+connection = Util.ConnectMysql()
+ExistenceValues = [0,0]
 
 def CheckNicknameExistence():
-    connection = ConnectMysql()
     if connection:
         nickname = NicknameEntry.get()
         if len(nickname) == 0:
@@ -50,12 +20,32 @@ def CheckNicknameExistence():
         NicknameExistence = cursor.fetchall()
         if NicknameExistence:
                 messagebox.showinfo("닉네임 중복", "이미 존재하는 닉네임이 있습니다.")
-                
         else:
                 messagebox.showinfo("닉네임 생성 가능", "사용 가능한 닉네임 입니다.")
+                if ExistenceValues[0] == 0:
+                    ExistenceValues[0] += 1
+                if sum(ExistenceValues) == 2:
+                    SignUpBtn.config(state="active")
                 
+def CheckIDExistence():
+    if connection:
+        id = IDEntry.get()
+        if len(id) == 0:
+            messagebox.showinfo("아이디 미기입", "아이디가 입력되지 않았습니다.")
+            return 
+        cursor = connection.cursor()
+        cursor.execute("SELECT id FROM user WHERE id=%s", (id,))
+        IDExistence = cursor.fetchall()
+        if IDExistence:
+                messagebox.showinfo("아이디 중복", "이미 존재하는 아이디가 있습니다.")
+                
+        else:
+                messagebox.showinfo("아이디 생성 가능", "사용 가능한 아이디 입니다.")
+                if ExistenceValues[1] == 0:
+                    ExistenceValues[1] += 1
+                if sum(ExistenceValues) == 2:
+                    SignUpBtn.config(state="active")
 def SignUp():
-    connection = ConnectMysql()
     if connection:
         nickname = NicknameEntry.get()
         id = IDEntry.get()
@@ -66,11 +56,13 @@ def SignUp():
         cursor.close()  # 커서 닫기
         connection.close()  # 커넥션 닫기
         messagebox.showinfo("회원가입 성공", "회원가입이 완료되었습니다.")
-        GoLoginPage()
+        Util.SwitchPage(window, "LoginPage")
+        
 window = Tk()
 window.title("회원가입")
 window.geometry("747x531")
 window.configure(bg = "#FFFFFF")
+
 
 
 canvas = Canvas(
@@ -125,11 +117,11 @@ canvas.create_text(
     font=("Inter", 40 * -1)
 )
 
-GoPrevPageBtn = tk.Button(text="이전으로", command=GoLoginPage)
+GoPrevPageBtn = tk.Button(text="이전으로", command=lambda:Util.SwitchPage(window, "LoginPage"))
 GoPrevPageBtn.place(x=356, y=367, width=133, height=38)
 
 SignUpBtn = tk.Button(text="회원가입", command=SignUp)
 SignUpBtn.place(x=511, y=367, width=133, height=38)
-
+SignUpBtn.config(state="disabled")
 window.resizable(False, False)
 window.mainloop()
