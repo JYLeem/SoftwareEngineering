@@ -60,7 +60,7 @@ class ExamApp(tk.Tk):
         self.start_button = ttk.Button(self, text="시험 시작", style='TButton', command=self.start_test)
         self.start_button.place(x=520, y=370)
 
-        self.bar_label = tk.Label(self, text="진행도", font=("Helvetica", 12), bg="#FFFFFF")
+        self.bar_label = tk.Label(self, text="레벨", font=("Helvetica", 12), bg="#FFFFFF")
         self.bar_label.place(x=150, y=150)
         
         self.time_label = tk.Label(self, text="", font=("Helvetica", 12), bg="#FFFFFF")
