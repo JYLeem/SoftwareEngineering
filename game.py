@@ -9,7 +9,7 @@ from PIL import Image, ImageTk
 from Util import Util
 
 class GameApp(tk.Tk):
-    def __init__(self):
+    def __init__(self, current_user):
         super().__init__()
         self.geometry("750x530")
         self.title("수뭉이 키우기 게임")
@@ -17,7 +17,7 @@ class GameApp(tk.Tk):
 
         self.db = self.connect_database()
         self.cursor = self.db.cursor()
-        self.current_user = sys.argv[1]
+        self.current_user = current_user
         self.game_duration = 100
         self.setup_game_variables()
         self.setup_ui()
@@ -221,5 +221,6 @@ class GameApp(tk.Tk):
         self.image_label.config(image=self.images[self.level])
 
 if __name__ == "__main__":
-    app = GameApp()
+    current_user = sys.argv[1] if len(sys.argv) > 1 else 'default_user'
+    app = GameApp(current_user)
     app.mainloop()

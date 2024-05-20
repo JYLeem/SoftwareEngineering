@@ -5,7 +5,7 @@ import sys
 from Util import Util
 from PIL import Image, ImageTk
 
-class LearningApp(tk.Tk):
+class LevelStudy(tk.Tk):
     def __init__(self, user):
         super().__init__()
         self.user = user
@@ -113,5 +113,5 @@ class LearningApp(tk.Tk):
 
 if __name__ == "__main__":
     user_id = sys.argv[1] if len(sys.argv) > 1 else 'default_user'
-    app = LearningApp(user_id)
+    app = LevelStudy(user_id)
     app.mainloop()

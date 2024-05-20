@@ -8,7 +8,7 @@ from Util import Util
 #from ttkbootstrap.constants import *
 from PIL import Image, ImageTk  # PIL 라이브러리 추가
 
-class ExamApp(tk.Tk):
+class DayExam(tk.Tk):
     def __init__(self, user):
         super().__init__()
         self.user = user
@@ -194,5 +194,5 @@ class ExamApp(tk.Tk):
 
 if __name__ == "__main__":
     user_id = sys.argv[1] if len(sys.argv) > 1 else 'default_user'
-    app = ExamApp(user_id)
+    app = DayExam(user_id)
     app.mainloop()
