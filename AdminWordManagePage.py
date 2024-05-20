@@ -196,15 +196,21 @@ class AdminWordManagePage(tk.Tk):
                     self.DiffiButtons.append(DiffiButton)
                     
     def InsertWord(self):
+        MaxLength = 40
         spell = self.SpellInput.get()
         mean = self.MeanInput.get()
         difficulty = self.DifficultyInput.get()
         now = datetime.now()
         message = f"{self.adminID}님이 {spell} 단어를 추가하셨습니다."
-        print(message)
         if self.connection:
             cursor = self.connection.cursor()
-            cursor.execute("INSERT INTO toeicword(Spell, Mean, Difficulty) VALUES (%s, %s, %s)", (spell, mean, difficulty))
+            cursor.execute("SELECT MAX(Day) from toeicword");
+            day = cursor.fetchone()[0]
+            cursor.execute("SELECT * from toeicword where Day = %s",(day,));
+            DayLength = len(cursor.fetchall())
+            if DayLength >= MaxLength:
+                day += 1
+            cursor.execute("INSERT INTO toeicword(Day, Spell, Mean, Difficulty) VALUES (%s,%s, %s, %s)", (day, spell, mean, difficulty))
             cursor.execute("INSERT INTO history(admin, log, changetime) VALUES (%s, %s, %s)", (self.adminID, message, now))
             self.connection.commit()
             cursor.close()  # 커서 닫기
