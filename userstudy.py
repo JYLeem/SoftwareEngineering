@@ -13,7 +13,10 @@ class DayStudy(tk.Tk):
         self.title("일자별 학습")
         self.configure(bg="#FFFFFF")
         self.connection = self.connect_database()
+        self.current_page = 0
+        self.days_per_page = 30  # 한 페이지당 일 수
         self.create_widgets()
+        self.update_progress_bar()
     
     def connect_database(self):
         # db연결 함수
@@ -42,7 +45,7 @@ class DayStudy(tk.Tk):
         self.day_label = tk.Label(self, text="학습 일자를 선택하세요", font=("Helvetica", 16), bg="#FFFFFF")
         self.day_label.place(x=70, y=45)
 
-        self.bar_label = tk.Label(self, text="진행도", font=("Helvetica", 12), bg="#FFFFFF")
+        self.bar_label = tk.Label(self, text="진도율", font=("Helvetica", 12), bg="#FFFFFF")
         self.bar_label.place(x=145, y=285)
         
         self.progress_bar = ttk.Progressbar(self, orient="horizontal", length=300, mode='determinate', maximum=100)
@@ -50,6 +53,12 @@ class DayStudy(tk.Tk):
         self.progress_bar['value'] = 0
         
         self.load_image("시험진행도.png")  # 이미지 경로 지정
+
+        # '이전', '다음' 버튼 추가
+        self.prev_button = tk.Button(self, text="이전", command=self.prev_page, width=7, height=1)
+        self.prev_button.place(x=25, y=250)
+        self.next_button = tk.Button(self, text="다음", command=self.next_page, width=7, height=1)
+        self.next_button.place(x=260, y=250)
 
         self.load_day_buttons()
 
@@ -77,10 +86,28 @@ class DayStudy(tk.Tk):
     def load_day_buttons(self):
         # 일자선택 버튼 생성
         cursor = self.connection.cursor()
-        cursor.execute("SELECT DISTINCT Day FROM toeicword ORDER BY Day")
-        days = cursor.fetchall()
+        cursor.execute("SELECT MAX(Day) FROM toeicword")
+        max_day = cursor.fetchone()[0]
         cursor.close()
         
+        self.total_pages = (max_day + self.days_per_page - 1) // self.days_per_page
+        
+        self.update_day_buttons()
+        
+    def update_day_buttons(self):
+        for widget in self.buttons_frame.winfo_children():
+            widget.destroy()
+        
+        start_day = self.current_page * self.days_per_page
+        end_day = start_day + self.days_per_page
+        if end_day > start_day + self.days_per_page:
+            end_day = start_day + self.days_per_page
+        
+        cursor = self.connection.cursor()
+        cursor.execute("SELECT DISTINCT Day FROM toeicword WHERE Day BETWEEN %s AND %s ORDER BY Day", (start_day, end_day))
+        days = cursor.fetchall()
+        cursor.close()
+
         rows, cols = 6, 5
         day_iter = iter(days)
         for r in range(rows):
@@ -91,7 +118,20 @@ class DayStudy(tk.Tk):
                     btn.grid(row=r, column=c)
                 except StopIteration:
                     break
-                
+
+        self.update_navigation_buttons()
+
+    def update_navigation_buttons(self):
+        if self.current_page > 0:
+            self.prev_button.config(state=tk.NORMAL)
+        else:
+            self.prev_button.config(state=tk.DISABLED)
+        
+        if self.current_page < self.total_pages - 1:
+            self.next_button.config(state=tk.NORMAL)
+        else:
+            self.next_button.config(state=tk.DISABLED)
+
     def load_image(self, image_path):
         # 캔버스 설정
         self.canvas_img = tk.Canvas(self, width=300, height=200, bg='white', borderwidth=0, highlightthickness=0)
@@ -127,8 +167,56 @@ class DayStudy(tk.Tk):
         cursor.close()
         
         for spell, mean in words:
-            word_label = tk.Label(self.scrollable_frame, text=f"{spell} / {mean}", font=("Helvetica", 12), bg="#FFFFFF")
-            word_label.pack(anchor="w")
+            word_frame = tk.Frame(self.scrollable_frame, bg="#F0F0F0", padx=10, pady=5)
+            word_frame.pack(fill="x", padx=5, pady=2)
+
+            # Spell Label
+            spell_label = tk.Label(word_frame, text=spell, font=("Helvetica", 12, "bold"), bg="#F0F0F0", anchor="w", wraplength=200)
+            spell_label.grid(row=0, column=0, sticky="w")
+
+            # Mean Label
+            mean_label = tk.Label(word_frame, text=mean, font=("Helvetica", 12), bg="#F0F0F0", anchor="e", wraplength=290)
+            mean_label.grid(row=0, column=1, sticky="e")
+
+            # Ensure that both labels fill the frame evenly
+            word_frame.grid_columnconfigure(0, weight=1)
+            word_frame.grid_columnconfigure(1, weight=1)
+
+
+
+    def prev_page(self):
+        if self.current_page > 0:
+            self.current_page -= 1
+            self.update_day_buttons()
+    
+    def next_page(self):
+        if self.current_page < self.total_pages - 1:
+            self.current_page += 1
+            self.update_day_buttons()
+
+    def update_progress_bar(self):
+        # 데이터베이스 연결
+        conn = mysql.connector.connect(
+            host='ystdb.cl260eouqhjz.ap-northeast-2.rds.amazonaws.com',
+            user='admin',
+            password='seat0323',
+            database='wordbook'
+        )
+        cursor = conn.cursor()
+
+        # 쿼리 실행
+        cursor.execute("SELECT wordday FROM user WHERE id = %s", (self.user,))
+        wordday = cursor.fetchone()[0]
+
+        cursor.execute("SELECT MAX(Day) FROM toeicword")
+        total_day = cursor.fetchone()[0]
+
+        # 연결 종료
+        conn.close()
+
+        # 진행도 계산
+        progress_value = (wordday / total_day) * 100
+        self.progress_bar['value'] = progress_value
 
 if __name__ == "__main__":
     user_id = sys.argv[1] if len(sys.argv) > 1 else 'default_user'

@@ -3,7 +3,6 @@ import tkinter as tk
 from tkinter import ttk, messagebox
 import mysql.connector
 from Util import Util
-# from UserExamDayPage import ExamApp
 
 class LoginPage(tk.Tk):
     def __init__(self):
@@ -12,11 +11,6 @@ class LoginPage(tk.Tk):
         self.geometry("900x600")
         self.configure(bg="#FFFFFF")
         self.connection = Util.ConnectMysql()
-        
-        # 스타일 설정
-        self.style = ttk.Style(self)
-        self.style.configure("TEntry", foreground="#000716", background="#CCCCCC")
-        self.style.configure("TButton", foreground="#000716", background="white", font=("Arial", 10))
         
         self.create_widgets()
         self.resizable(False, False)
@@ -40,26 +34,60 @@ class LoginPage(tk.Tk):
         self.canvas.place(x=0, y=0)
         self.canvas.create_image(450, 300, image=self.bg_image, anchor="center")
 
+        # 로고 이미지 로드 및 배치
+        self.logo_image = Image.open("로고.png")
+        self.logo_image = self.logo_image.resize((300, 180), Image.Resampling.LANCZOS)
+        self.logo_photo = ImageTk.PhotoImage(self.logo_image)
+        self.canvas.create_image(490, 190, image=self.logo_photo, anchor="center")
+
         # 위젯 생성
         self.IDEntry = ttk.Entry(self, style="TEntry")
-        self.IDEntry.place(x=320.0, y=248.0, width=300, height=34)
+        self.IDEntry.place(x=340.0, y=280.0, width=300, height=34)
 
         self.PasswordEntry = ttk.Entry(self, style="TEntry", show='*')
-        self.PasswordEntry.place(x=320.0, y=309.0, width=300, height=34)
+        self.PasswordEntry.place(x=340.0, y=335.0, width=300, height=34)
 
         # 더 굵고 진한 텍스트 설정
-        self.canvas.create_text(270.0, 263.0, text="ID", font=("Arial Bold", 14), fill="#000000", anchor="w")
-        self.canvas.create_text(270.0, 324.0, text="PW", font=("Arial Bold", 14), fill="#000000", anchor="w")
-        self.canvas.create_text(250.0, 180.0, anchor="nw", text="TOEIC 영단어 학습 프로그램", fill="#000000", font=("Inter", 30 * -1))
+        self.canvas.create_text(305.0, 297.0, text="ID", font=("Arial Bold", 14), fill="#000000", anchor="w")
+        self.canvas.create_text(300.0, 352.0, text="PW", font=("Arial Bold", 14), fill="#000000", anchor="w")
+        #self.canvas.create_text(250.0, 180.0, anchor="nw", text="TOEIC 영단어 학습 프로그램", fill="#000000", font=("Inter", 30 * -1))
 
-        self.SignUpBtn = ttk.Button(self, text="회원가입", style="TButton", command=self.SwitchToSignUpPage)
-        self.SignUpBtn.place(x=320, y=380, width=133, height=33)
-        
-        self.LoginBtn = ttk.Button(self, text="로그인", style="TButton", command=self.login)
-        self.LoginBtn.place(x=476, y=380, width=133, height=33)
-        
+        # 로그인 버튼 이미지 로드 및 설정
+        self.login_normal_image = Image.open("로그인일반.png")
+        self.login_hover_image = Image.open("로그인호버.png")
+        self.login_normal_photo = ImageTk.PhotoImage(self.login_normal_image)
+        self.login_hover_photo = ImageTk.PhotoImage(self.login_hover_image)
+
+        self.LoginBtn = tk.Button(self, image=self.login_normal_photo, command=self.login, borderwidth=0, bg="#FFFFFF", activebackground="#FFFFFF")
+        self.LoginBtn.place(x=510, y=390)
+        self.LoginBtn.bind("<Enter>", self.on_login_enter)
+        self.LoginBtn.bind("<Leave>", self.on_login_leave)
+
+        # 회원가입 버튼 이미지 로드 및 설정
+        self.signup_normal_image = Image.open("회원가입일반.png")
+        self.signup_hover_image = Image.open("회원가입호버.png")
+        self.signup_normal_photo = ImageTk.PhotoImage(self.signup_normal_image)
+        self.signup_hover_photo = ImageTk.PhotoImage(self.signup_hover_image)
+
+        self.SignUpBtn = tk.Button(self, image=self.signup_normal_photo, command=self.SwitchToSignUpPage, borderwidth=0, bg="#FFFFFF", activebackground="#FFFFFF")
+        self.SignUpBtn.place(x=370, y=390)
+        self.SignUpBtn.bind("<Enter>", self.on_signup_enter)
+        self.SignUpBtn.bind("<Leave>", self.on_signup_leave)
+
         self.resizable(False, False)
     
+    def on_login_enter(self, event):
+        self.LoginBtn.config(image=self.login_hover_photo)
+
+    def on_login_leave(self, event):
+        self.LoginBtn.config(image=self.login_normal_photo)
+
+    def on_signup_enter(self, event):
+        self.SignUpBtn.config(image=self.signup_hover_photo)
+
+    def on_signup_leave(self, event):
+        self.SignUpBtn.config(image=self.signup_normal_photo)
+
     def login(self):
         if self.connection:  # 연결 확인
             id = self.IDEntry.get()
