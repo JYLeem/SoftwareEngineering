@@ -25,7 +25,12 @@ class DayExam(tk.Tk):
         self.timer_id = None
         self.sumoongi_image = None
         self.create_widgets()
-
+        self.protocol("WM_DELETE_WINDOW", self.OnClosing)
+        
+    def OnClosing(self):
+        Util.OnClosing(self.connection, self.user)
+        self.destroy()
+        
     def connect_database(self):
         try:
             return mysql.connector.connect(
@@ -48,7 +53,8 @@ class DayExam(tk.Tk):
         
         self.back_button = self.create_image_button(
             "이전으로일반.png", "이전으로호버.png",
-            lambda: Util.SwitchPage(self, "UserMainPage", self.user), 0.8
+            command=self.SwitchToUserMainPage, 
+            scale=0.8
         )
         self.back_button.place(x=25, y=10)
         self.buttons_frame = tk.Frame(self, bg="#FFFFFF")
@@ -335,10 +341,16 @@ class DayExam(tk.Tk):
 
 
     def stop_test_and_go_back(self):
+        
         self.reset_timer()
         self.finish_test()
         Util.SwitchPage(self, "UserMainPage", self.user)
 
+    def SwitchToUserMainPage(self):
+        from UserMainPage import UserMainPage
+        self.destroy()
+        app = UserMainPage(self.user)
+        app.mainloop()
 if __name__ == "__main__":
     user_id = sys.argv[1] if len(sys.argv) > 1 else 'default_user'
     app = DayExam(user_id)
