@@ -21,7 +21,12 @@ class LevelExam(tk.Tk):
         self.time_remaining = 600
         self.timer_id = None
         self.create_widgets()
-
+        self.protocol("WM_DELETE_WINDOW", self.OnClosing)
+        
+    def OnClosing(self):
+        Util.OnClosing(self.connection, self.user)
+        self.destroy()
+        
     def connect_database(self):
         try:
             return mysql.connector.connect(
@@ -37,7 +42,8 @@ class LevelExam(tk.Tk):
     def create_widgets(self):
         self.back_button = self.create_image_button(
             "이전으로일반.png", "이전으로호버.png",
-            lambda: Util.SwitchPage(self, "UserMainPage", self.user), 0.8
+            command=self.SwitchToUserMainPage, 
+            scale=0.8
         )
         self.back_button.place(x=25, y=10)
 
@@ -282,6 +288,11 @@ class LevelExam(tk.Tk):
         self.canvas_img.create_image(150, 100, image=photo)
         self.canvas_img.image = photo
 
+    def SwitchToUserMainPage(self):
+        from UserMainPage import UserMainPage
+        self.destroy()
+        app = UserMainPage(self.user)
+        app.mainloop()
 if __name__ == "__main__":
     user_id = sys.argv[1] if len(sys.argv) > 1 else 'default_user'
     app = LevelExam(user_id)
