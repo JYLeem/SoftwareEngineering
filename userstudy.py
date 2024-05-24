@@ -15,11 +15,12 @@ class DayStudy(tk.Tk):
         self.connection = self.connect_database()
         self.current_page = 0
         self.days_per_page = 30  # 한 페이지당 일 수
+        self.words_per_page = 12  # 한 페이지당 단어 수, 초기값 설정
+        self.current_word_page = 0  # 현재 단어 페이지
         self.create_widgets()
         self.update_progress_bar()
     
     def connect_database(self):
-        # db연결 함수
         try:
             connection = mysql.connector.connect(
                 host="ystdb.cl260eouqhjz.ap-northeast-2.rds.amazonaws.com",
@@ -33,11 +34,19 @@ class DayStudy(tk.Tk):
             self.destroy()
     
     def create_widgets(self):
-        # 기본 요소 생성함수
-        
-        # 이전 버튼 추가, 좌표 지정
-        self.back_button = tk.Button(self, text="이전으로", command=lambda: Util.SwitchPage(self, "UserMainPage", self.user), width=6, height=1, font=("Helvetica", 8))
-        self.back_button.place(x=25, y=10)  # 좌표 (10, 10) 위치에 버튼 배치
+        style = ttk.Style()
+        style.configure("TButton",
+                        padding=0,  # 패딩을 0으로 설정
+                        background="#FFFFFF",  # 배경색 제거
+                        relief="flat")  # 테두리 제거
+
+        self.back_button = self.create_image_button(
+            normal_image_path="이전으로일반.png",
+            hover_image_path="이전으로호버.png",
+            command=lambda: Util.SwitchPage(self, "UserMainPage", self.user),
+            scale=0.8
+        )
+        self.back_button.place(x=25, y=10)
         
         self.buttons_frame = tk.Frame(self, bg="#FFFFFF")
         self.buttons_frame.place(x=25, y=90)
@@ -52,17 +61,26 @@ class DayStudy(tk.Tk):
         self.progress_bar.place(x=25, y=310)
         self.progress_bar['value'] = 0
         
-        self.load_image("시험진행도.png")  # 이미지 경로 지정
+        self.load_image("시험진행도.png")
 
-        # '이전', '다음' 버튼 추가
-        self.prev_button = tk.Button(self, text="이전", command=self.prev_page, width=7, height=1)
+        self.prev_button = self.create_image_button(
+            normal_image_path="이전버튼일반.png",
+            hover_image_path="이전버튼호버.png",
+            command=self.prev_page,
+            scale=1.0
+        )
         self.prev_button.place(x=25, y=250)
-        self.next_button = tk.Button(self, text="다음", command=self.next_page, width=7, height=1)
+        
+        self.next_button = self.create_image_button(
+            normal_image_path="다음버튼일반.png",
+            hover_image_path="다음버튼호버.png",
+            command=self.next_page,
+            scale=1.0
+        )
         self.next_button.place(x=260, y=250)
 
         self.load_day_buttons()
 
-        # 단어 목록을 표시할 Frame과 Scrollbar 생성
         self.word_frame = tk.Frame(self, bg="#FFFFFF", highlightbackground="black", highlightcolor="black", highlightthickness=1)
         self.word_frame.place(x=350, y=35, width=425, height=515)
 
@@ -83,8 +101,32 @@ class DayStudy(tk.Tk):
         self.canvas.pack(side="left", fill="both", expand=True)
         self.scrollbar.pack(side="right", fill="y")
         
+        self.word_prev_button = self.create_image_button(
+            "이전버튼일반.png", "이전버튼호버.png", self.prev_word_page, 1.0
+        )
+        self.word_next_button = self.create_image_button(
+            "다음버튼일반.png", "다음버튼호버.png", self.next_word_page, 1.0
+        )
+        self.word_prev_button.place(x=400, y=556)
+        self.word_next_button.place(x=500, y=556)
+        self.word_prev_button.place_forget()
+        self.word_next_button.place_forget()
+
+    def create_image_button(self, normal_image_path, hover_image_path, command, scale):
+        original_normal_image = Image.open(normal_image_path)
+        original_hover_image = Image.open(hover_image_path)
+        normal_image = ImageTk.PhotoImage(original_normal_image.resize(
+            (int(original_normal_image.width * scale), int(original_normal_image.height * scale)), Image.Resampling.LANCZOS))
+        hover_image = ImageTk.PhotoImage(original_hover_image.resize(
+            (int(original_hover_image.width * scale), int(original_hover_image.height * scale)), Image.Resampling.LANCZOS))
+        button = tk.Label(self, image=normal_image, bg="#FFFFFF")
+        button.image = normal_image
+        button.bind("<Enter>", lambda e: button.config(image=hover_image))
+        button.bind("<Leave>", lambda e: button.config(image=normal_image))
+        button.bind("<Button-1>", lambda e: command())
+        return button
+        
     def load_day_buttons(self):
-        # 일자선택 버튼 생성
         cursor = self.connection.cursor()
         cursor.execute("SELECT MAX(Day) FROM toeicword")
         max_day = cursor.fetchone()[0]
@@ -114,8 +156,8 @@ class DayStudy(tk.Tk):
             for c in range(cols):
                 try:
                     day = next(day_iter)[0]
-                    btn = tk.Button(self.buttons_frame, text=f"{day+1}", command=lambda d=day: self.select_day(d), width=7, height=1)
-                    btn.grid(row=r, column=c)
+                    btn = ttk.Button(self.buttons_frame, text=f"{day+1}", command=lambda d=day: self.select_day(d), width=7, style="TButton")
+                    btn.grid(row=r, column=c, padx=1, pady=1)
                 except StopIteration:
                     break
 
@@ -133,56 +175,81 @@ class DayStudy(tk.Tk):
             self.next_button.config(state=tk.DISABLED)
 
     def load_image(self, image_path):
-        # 캔버스 설정
         self.canvas_img = tk.Canvas(self, width=300, height=200, bg='white', borderwidth=0, highlightthickness=0)
-        self.canvas_img.place(x=25, y=350)  # 이미지 위치 지정
+        self.canvas_img.place(x=25, y=350)
 
-        # 이미지 파일 열기
         image = Image.open(image_path)
-            
-        # 캔버스 크기에 맞게 이미지 크기 조정
-        resized_image = image.resize((300, 200), Image.Resampling.LANCZOS)  # 이미지를 300x200 크기로 조정
+        resized_image = image.resize((300, 200), Image.Resampling.LANCZOS)
         photo = ImageTk.PhotoImage(resized_image)
 
-        # 캔버스에 이미지 배치, 위치는 캔버스 중앙
         self.canvas_img.create_image(150, 100, image=photo)
-            
-        # 이미지 객체 참조를 유지해야 이미지가 화면에 나타남
         self.canvas_img.image = photo           
 
     def select_day(self, day):
-        # 일자 선택에 따라 보여지는 텍스트 조정
         self.current_day = day
         self.day_label.config(text=f"{day+1}일차 단어 학습")
+        self.current_word_page = 0  # 일자 선택 시 단어 페이지 초기화
         self.load_words(day)
 
     def load_words(self, day):
-        # 선택한 일자의 단어를 가져와서 표시
-        for widget in self.scrollable_frame.winfo_children():
-            widget.destroy()
-        
         cursor = self.connection.cursor()
         cursor.execute("SELECT Spell, Mean FROM toeicword WHERE Day = %s", (day,))
-        words = cursor.fetchall()
+        self.words = cursor.fetchall()
         cursor.close()
+        self.display_words()
+
+    def display_words(self):
+        for widget in self.scrollable_frame.winfo_children():
+            widget.destroy()
+            
+        self.update_idletasks()  # 레이아웃 업데이트
+
+        frame_height = self.word_frame.winfo_height() * 0.99  # 프레임 높이의 90%를 사용
+        word_frame_height = 40  # 각 단어 프레임의 높이
+        self.words_per_page = max(1, int(frame_height / word_frame_height))  # 최소 1개의 단어는 표시
         
-        for spell, mean in words:
+        start_index = self.current_word_page * self.words_per_page
+        end_index = min(start_index + self.words_per_page, len(self.words))
+        
+        for spell, mean in self.words[start_index:end_index]:
             word_frame = tk.Frame(self.scrollable_frame, bg="#F0F0F0", padx=10, pady=5)
             word_frame.pack(fill="x", padx=5, pady=2)
 
-            # Spell Label
             spell_label = tk.Label(word_frame, text=spell, font=("Helvetica", 12, "bold"), bg="#F0F0F0", anchor="w", wraplength=200)
             spell_label.grid(row=0, column=0, sticky="w")
 
-            # Mean Label
             mean_label = tk.Label(word_frame, text=mean, font=("Helvetica", 12), bg="#F0F0F0", anchor="e", wraplength=290)
             mean_label.grid(row=0, column=1, sticky="e")
 
-            # Ensure that both labels fill the frame evenly
             word_frame.grid_columnconfigure(0, weight=1)
             word_frame.grid_columnconfigure(1, weight=1)
 
+        self.update_word_navigation_buttons()
 
+
+    def update_word_navigation_buttons(self):
+        self.word_prev_button.place(x=400, y=556)
+        self.word_next_button.place(x=500, y=556)
+        
+        if self.current_word_page > 0:
+            self.word_prev_button.config(state=tk.NORMAL)
+        else:
+            self.word_prev_button.config(state=tk.DISABLED)
+        
+        if (self.current_word_page + 1) * self.words_per_page < len(self.words):
+            self.word_next_button.config(state=tk.NORMAL)
+        else:
+            self.word_next_button.config(state=tk.DISABLED)
+
+    def prev_word_page(self):
+        if self.current_word_page > 0:
+            self.current_word_page -= 1
+            self.display_words()
+
+    def next_word_page(self):
+        if (self.current_word_page + 1) * self.words_per_page < len(self.words):
+            self.current_word_page += 1
+            self.display_words()
 
     def prev_page(self):
         if self.current_page > 0:
@@ -195,7 +262,6 @@ class DayStudy(tk.Tk):
             self.update_day_buttons()
 
     def update_progress_bar(self):
-        # 데이터베이스 연결
         conn = mysql.connector.connect(
             host='ystdb.cl260eouqhjz.ap-northeast-2.rds.amazonaws.com',
             user='admin',
@@ -204,17 +270,14 @@ class DayStudy(tk.Tk):
         )
         cursor = conn.cursor()
 
-        # 쿼리 실행
         cursor.execute("SELECT wordday FROM user WHERE id = %s", (self.user,))
         wordday = cursor.fetchone()[0]
 
         cursor.execute("SELECT MAX(Day) FROM toeicword")
         total_day = cursor.fetchone()[0]
 
-        # 연결 종료
         conn.close()
 
-        # 진행도 계산
         progress_value = (wordday / total_day) * 100
         self.progress_bar['value'] = progress_value
 

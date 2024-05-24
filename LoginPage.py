@@ -3,6 +3,7 @@ import tkinter as tk
 from tkinter import ttk, messagebox
 import mysql.connector
 from Util import Util
+import datetime
 
 class LoginPage(tk.Tk):
     def __init__(self):
@@ -50,7 +51,6 @@ class LoginPage(tk.Tk):
         # 더 굵고 진한 텍스트 설정
         self.canvas.create_text(305.0, 297.0, text="ID", font=("Arial Bold", 14), fill="#000000", anchor="w")
         self.canvas.create_text(300.0, 352.0, text="PW", font=("Arial Bold", 14), fill="#000000", anchor="w")
-        #self.canvas.create_text(250.0, 180.0, anchor="nw", text="TOEIC 영단어 학습 프로그램", fill="#000000", font=("Inter", 30 * -1))
 
         # 로그인 버튼 이미지 로드 및 설정
         self.login_normal_image = Image.open("로그인일반.png")
@@ -107,6 +107,7 @@ class LoginPage(tk.Tk):
                     self.cursor.execute("SELECT * FROM user WHERE id=%s AND password=%s", (id, password))
                     IsUser = self.cursor.fetchone()
                     if IsUser:
+                        self.update_last_login(id)
                         from UserMainPage import UserMainPage
                         self.cursor.execute("UPDATE user SET isaccess = 1 WHERE id = %s",(id,))
                         self.connection.commit()  # 커밋을 수행하여 변경 사항을 DB에 적용
@@ -116,6 +117,11 @@ class LoginPage(tk.Tk):
                         app.mainloop()
                     else:
                         messagebox.showinfo("로그인 실패", "로그인 실패. 사용자 이름 또는 비밀번호를 확인하세요.")
+
+    def update_last_login(self, user_id):
+        today = datetime.date.today()
+        self.cursor.execute("UPDATE user SET last_login = %s WHERE id = %s", (today, user_id))
+        self.connection.commit()
 
     def SwitchToSignUpPage(self):
         from SignUpPage import SignUpPage

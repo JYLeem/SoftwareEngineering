@@ -200,7 +200,7 @@ class UserMainPage(tk.Tk):
         self.progress2['value'] = progress2_value
 
     def SwitchToDayStudy(self):
-        from userstudy import DayStudy
+        from UserStudyDayPage import DayStudy
         self.destroy()
         app = DayStudy(self.userID)
         app.mainloop()
