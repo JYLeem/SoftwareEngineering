@@ -17,18 +17,11 @@ class Util:
                 return connection
         except Error as e:
             print("MySQL에 연결하는 동안 오류 발생:", e)  
-    
+   
     @staticmethod
-    def SwitchPage(window, PageName, id=None):
-        # 현재 프로세스를 실행하여 subprocess.Popen 객체로 저장
-        process = None
-        if id is None:
-            process = subprocess.Popen(['python', '%s.py' % PageName])
-        else:
-            process = subprocess.Popen(['python', '%s.py' % PageName, id])
-
-        # 이전 페이지를 종료하지 않고 현재 페이지를 숨김
-        window.withdraw()
-
-        # subprocess.Popen 객체 반환
-        return process
+    def OnClosing(connection, userid):
+        if connection is not None:
+            cursor = connection.cursor()
+            cursor.execute("UPDATE user SET isaccess = 0 WHERE id = %s", (userid,))
+            connection.commit()
+            cursor.close()
