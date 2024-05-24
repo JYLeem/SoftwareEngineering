@@ -21,7 +21,7 @@ class UserMainPage(tk.Tk):
             relief="ridge"
         )
         self.canvas.place(x=0, y=0)
-
+    
         
         self.UserIDLabel = tk.Label(self, text=userID)
         self.UserIDLabel.place(x=300, y=0, width=100, height=30)
@@ -37,7 +37,8 @@ class UserMainPage(tk.Tk):
 
         self.logOutBtn = tk.Button(text="로그아웃", command=self.SwitchToLoginPage)
         self.logOutBtn.place(x=283, y=400, width=180, height=80)
-        
+        self.protocol("WM_DELETE_WINDOW", self.OnClosing)
+
     def SwitchToLoginPage(self):
             self.cursor = self.connection.cursor()
             self.cursor.execute("UPDATE user SET isaccess = 0 WHERE id = %s",(userID,))
@@ -46,6 +47,10 @@ class UserMainPage(tk.Tk):
             self.destroy()
             app = LoginPage(self)
             app.mainloop()
+    def OnClosing(self):
+        Util.OnClosing(self.connection, self.userID)
+        self.destroy()
+
 if __name__ == "__main__":
     userID = sys.argv[1] if len(sys.argv) > 1 else 'default_user'
     app = UserMainPage(userID)
