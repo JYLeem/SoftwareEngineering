@@ -14,7 +14,12 @@ class LevelStudy(tk.Tk):
         self.configure(bg="#FFFFFF")
         self.connection = self.connect_database()
         self.create_widgets()
-    
+        self.protocol("WM_DELETE_WINDOW", self.OnClosing)
+        
+    def OnClosing(self):
+        Util.OnClosing(self.connection, self.user)
+        self.destroy()
+        
     def connect_database(self):
         # db연결 함수
         try:
@@ -33,7 +38,7 @@ class LevelStudy(tk.Tk):
         # 기본 요소 생성함수
         
         # 이전 버튼 추가, 좌표 지정
-        self.back_button = tk.Button(self, text="이전으로", command=lambda: Util.SwitchPage(self, "UserMainPage", self.user), width=6, height=1, font=("Helvetica", 8))
+        self.back_button = tk.Button(self, text="이전으로", command=self.SwitchToUserMainPage, width=6, height=1, font=("Helvetica", 8))
         self.back_button.place(x=25, y=10)  # 좌표 (10, 10) 위치에 버튼 배치
 
         # 난이도 선택 레이블 및 드롭다운 메뉴 추가
@@ -111,6 +116,11 @@ class LevelStudy(tk.Tk):
         else:
             messagebox.showinfo("단어 없음", "선택한 난이도에 해당하는 단어가 없습니다.")
 
+    def SwitchToUserMainPage(self):
+        from UserMainPage import UserMainPage
+        self.destroy()
+        app = UserMainPage(self.user)
+        app.mainloop()
 if __name__ == "__main__":
     user_id = sys.argv[1] if len(sys.argv) > 1 else 'default_user'
     app = LevelStudy(user_id)
