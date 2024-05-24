@@ -21,7 +21,12 @@ class DayStudy(tk.Tk):
         self.wordday = 0  # 사용자 단어일 초기값
         self.create_widgets()
         self.update_progress_bar()
-    
+        self.protocol("WM_DELETE_WINDOW", self.OnClosing)
+        
+    def OnClosing(self):
+        Util.OnClosing(self.connection, self.user)
+        self.destroy()
+        
     def connect_database(self):
         try:
             connection = mysql.connector.connect(
@@ -45,7 +50,7 @@ class DayStudy(tk.Tk):
         self.back_button = self.create_image_button(
             normal_image_path="이전으로일반.png",
             hover_image_path="이전으로호버.png",
-            command=lambda: Util.SwitchPage(self, "UserMainPage", self.user),
+            command=self.SwitchToUserMainPage,
             scale=0.8
         )
         self.back_button.place(x=25, y=10)
@@ -305,7 +310,12 @@ class DayStudy(tk.Tk):
 
         progress_value = (wordday / total_day) * 100
         self.progress_bar['value'] = progress_value
-
+        
+    def SwitchToUserMainPage(self):
+        from UserMainPage import UserMainPage
+        self.destroy()
+        app = UserMainPage(self.user)
+        app.mainloop()
 if __name__ == "__main__":
     user_id = sys.argv[1] if len(sys.argv) > 1 else 'default_user'
     app = DayStudy(user_id)
