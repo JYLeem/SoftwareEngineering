@@ -9,7 +9,7 @@ from PIL import Image, ImageTk
 from Util import Util
 
 class GameApp(tk.Tk):
-    def __init__(self, current_user):
+    def __init__(self, user):
         super().__init__()
         self.geometry("750x530")
         self.title("수뭉이 키우기 게임")
@@ -17,12 +17,17 @@ class GameApp(tk.Tk):
 
         self.db = self.connect_database()
         self.cursor = self.db.cursor()
-        self.current_user = current_user
+        self.user = user
         self.game_duration = 4
         self.setup_game_variables()
         #self.setup_button_style()
         self.setup_ui()
-
+        self.protocol("WM_DELETE_WINDOW", self.OnClosing)
+        
+    def OnClosing(self):
+        Util.OnClosing(self.db, self.user)
+        self.destroy()
+        
     def connect_database(self):
         return mysql.connector.connect(
             host="ystdb.cl260eouqhjz.ap-northeast-2.rds.amazonaws.com",
@@ -55,7 +60,7 @@ class GameApp(tk.Tk):
                   background=[('active', '#005f73')])
 
     def setup_ui(self):
-        self.back_button = self.create_image_button("이전으로일반.png", "이전으로호버.png", lambda: Util.SwitchPage(self, "UserMainPage", self.current_user), 50, 30)
+        self.back_button = self.create_image_button("이전으로일반.png", "이전으로호버.png", command=self.SwitchToUserMainPage, width=50, height=30)
         self.back_button.place(x=10, y=10)
         
         # 실시간 순위 라벨과 프레임 위치 조정
@@ -209,7 +214,7 @@ class GameApp(tk.Tk):
         """사용자의 최고 점수를 데이터베이스에 업데이트하는 메서드"""
         query = "UPDATE user SET highscore = %s WHERE id = %s AND highscore < %s"
         try:
-            self.cursor.execute(query, (self.current_score, self.current_user, self.current_score))
+            self.cursor.execute(query, (self.current_score, self.user, self.current_score))
             self.db.commit()
         except mysql.connector.Error as err:
             self.db.rollback()
@@ -250,8 +255,12 @@ class GameApp(tk.Tk):
         # 리더보드 내용을 갱신
         self.display_leaderboard()
         self.image_label.config(image=self.images[self.level])
-
+    def SwitchToUserMainPage(self):
+        from UserMainPage import UserMainPage
+        self.destroy()
+        app = UserMainPage(self.user)
+        app.mainloop()
 if __name__ == "__main__":
-    current_user = sys.argv[1] if len(sys.argv) > 1 else 'default_user'
-    app = GameApp(current_user)
+    user = sys.argv[1] if len(sys.argv) > 1 else 'default_user'
+    app = GameApp(user)
     app.mainloop()
