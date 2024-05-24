@@ -19,8 +19,8 @@ class Util:
             print("MySQL에 연결하는 동안 오류 발생:", e)  
     
     @staticmethod
-    def OnClosing(connection = None, userid=None):
-        if connection != None:
+    def OnClosing(connection, userid):
+        if connection is not None:
             cursor = connection.cursor()
             cursor.execute("UPDATE user SET isaccess = 0 WHERE id = %s", (userid,))
             connection.commit()
