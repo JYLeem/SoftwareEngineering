@@ -39,11 +39,11 @@ class AdminWordManagePage(tk.Tk):
         self.ListEntireWordsBtn = tk.Button(text="전체 단어 조회", command=self.ListEntireWords)
         self.ListEntireWordsBtn.place(x=188, y=422, width=150, height=40)
 
-        self.SearchWordInput = tk.Entry()
-        self.SearchWordInput.place(x=32, y=103, width=200, height=40)
+        self.SearchInfoInput = tk.Entry()
+        self.SearchInfoInput.place(x=32, y=103, width=200, height=40)
 
-        self.SearchWordBtn = tk.Button(text="단어 검색", command=self.ListSpecificWords)
-        self.SearchWordBtn.place(x=240, y=103, width=100, height=40)
+        self.SearchInfoBtn = tk.Button(text="단어 검색", command=self.ListSpecificWords)
+        self.SearchInfoBtn.place(x=240, y=103, width=100, height=40)
 
         self.UpdateWordBtn = tk.Button(text="단어 수정", command=self.UpdateWord)
         self.UpdateWordBtn.place(x=143, y=361, width=90, height=40)
@@ -109,19 +109,21 @@ class AdminWordManagePage(tk.Tk):
         if self.connection:
             cursor = self.connection.cursor()
             cursor.execute("SELECT word_id, Spell, Mean, Difficulty FROM toeicword")
-            self.EntireWordInfos = cursor.fetchall()
+            self.WordInfos = cursor.fetchall()
             self.current_page = 0
             self.ShowPage()
 
     def ListSpecificWords(self):
-        SearchWord = self.SearchWordInput.get()
-        if len(SearchWord) == 0:
+        SearchInfo = self.SearchInfoInput.get()
+        if len(SearchInfo) == 0:
             messagebox.showinfo("검색 오류", "입력이 올바르게 되지 않았습니다. 다시 시도해주세요.")
         else:
             if self.connection:
                 cursor = self.connection.cursor()
-                cursor.execute("SELECT word_id, Spell, Mean, Difficulty FROM toeicword WHERE Spell LIKE %s", ('%' + SearchWord + '%',))
-                self.EntireWordInfos = cursor.fetchall()
+                cursor.execute("SELECT word_id, Spell, Mean, Difficulty FROM toeicword WHERE Spell LIKE %s OR Mean LIKE %s OR Difficulty LIKE %s", ('%' + SearchInfo + '%', '%' + SearchInfo + '%', '%' + SearchInfo + '%',))
+                self.WordInfos = cursor.fetchall()
+                if len(self.WordInfos)==0:
+                    messagebox.showinfo("검색 결과 없음", "검색 결과가 없습니다.")
                 self.current_page = 0
                 self.ShowPage()
 
@@ -132,7 +134,7 @@ class AdminWordManagePage(tk.Tk):
         start_idx = self.current_page * self.words_per_page
         end_idx = start_idx + self.words_per_page
 
-        for WordInfo in self.EntireWordInfos[start_idx:end_idx]:
+        for WordInfo in self.WordInfos[start_idx:end_idx]:
             frame = tk.Frame(self.word_frame)
             frame.pack(fill='x', padx=5, pady=2)
             SpellButton = tk.Button(frame, text=f"{WordInfo[1]}", command=lambda wi=WordInfo: self.WordButtonClick(wi), width=14)
@@ -147,7 +149,7 @@ class AdminWordManagePage(tk.Tk):
             self.MeanButtons.append(MeanButton)
             self.DiffiButtons.append(DiffiButton)
 
-        self.next_button.config(state=tk.NORMAL if end_idx < len(self.EntireWordInfos) else tk.DISABLED)
+        self.next_button.config(state=tk.NORMAL if end_idx < len(self.WordInfos) else tk.DISABLED)
         self.prev_button.config(state=tk.NORMAL if self.current_page > 0 else tk.DISABLED)
 
     def NextPage(self):
@@ -159,20 +161,31 @@ class AdminWordManagePage(tk.Tk):
         self.ShowPage()
 
     def InsertWord(self):
+        MaxWordNum = 40
         spell = self.SpellInput.get()
         mean = self.MeanInput.get()
         difficulty = self.DifficultyInput.get()
         now = datetime.now()
         message = f"{self.adminID}님이 {spell} 단어를 추가하셨습니다."
-        print(message)
         if self.connection:
             cursor = self.connection.cursor()
-            cursor.execute("INSERT INTO toeicword(Spell, Mean, Difficulty) VALUES (%s, %s, %s)", (spell, mean, difficulty))
+            cursor.execute("SELECT MAX(Day) from toeicword");
+            day = cursor.fetchone()[0]
+            cursor.execute("SELECT * from toeicword where Day = %s",(day,));
+            WordNum = len(cursor.fetchall())
+            if WordNum >= MaxWordNum:
+                day += 1
+            cursor.execute("INSERT INTO toeicword(Day, Spell, Mean, Difficulty) VALUES (%s,%s, %s, %s)", (day, spell, mean, difficulty))
             cursor.execute("INSERT INTO history(admin, log, changetime) VALUES (%s, %s, %s)", (self.adminID, message, now))
             self.connection.commit()
             cursor.close()  # 커서 닫기
             messagebox.showinfo("단어 추가 성공", "단어가 성공적으로 추가되었습니다.")
-
+            self.SearchInfoInput.delete(0, tk.END)
+            self.SpellInput.delete(0, tk.END)
+            self.MeanInput.delete(0, tk.END)
+            self.DifficultyInput.delete(0, tk.END)
+            for i in range(3):
+                self.PrevInfos.pop()
     def DeleteWord(self):
         spell = self.SpellInput.get()
         mean = self.MeanInput.get()
@@ -186,7 +199,7 @@ class AdminWordManagePage(tk.Tk):
             self.connection.commit()  # 커밋을 수행하여 변경 사항을 DB에 적용
             cursor.close()  # 커서 닫기
             messagebox.showinfo("단어 삭제 성공", "단어가 성공적으로 삭제되었습니다.")
-            self.SearchWordInput.delete(0, tk.END)
+            self.SearchInfoInput.delete(0, tk.END)
             self.SpellInput.delete(0, tk.END)
             self.MeanInput.delete(0, tk.END)
             self.DifficultyInput.delete(0, tk.END)
@@ -207,7 +220,7 @@ class AdminWordManagePage(tk.Tk):
             cursor.close()  # 커서 닫기
 
             messagebox.showinfo("단어 수정 성공", "단어가 성공적으로 수정되었습니다.")
-            self.SearchWordInput.delete(0, tk.END)
+            self.SearchInfoInput.delete(0, tk.END)
             self.SpellInput.delete(0, tk.END)
             self.MeanInput.delete(0, tk.END)
             self.DifficultyInput.delete(0, tk.END)
