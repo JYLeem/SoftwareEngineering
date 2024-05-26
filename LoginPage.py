@@ -4,6 +4,7 @@ from tkinter import ttk, messagebox
 import mysql.connector
 from Util import Util
 import datetime
+from tkinter import font as tkFont  # 폰트 모듈 추가
 
 class LoginPage(tk.Tk):
     def __init__(self):
@@ -13,6 +14,9 @@ class LoginPage(tk.Tk):
         self.configure(bg="#FFFFFF")
         self.connection = Util.ConnectMysql()
         
+        # 메이플스토리 폰트 로드
+        self.maple_font = tkFont.Font(family="Maplestory", size=14, weight="bold")
+
         self.create_widgets()
         self.resizable(False, False)
     
@@ -49,8 +53,8 @@ class LoginPage(tk.Tk):
         self.PasswordEntry.place(x=340.0, y=335.0, width=300, height=34)
 
         # 더 굵고 진한 텍스트 설정
-        self.canvas.create_text(305.0, 297.0, text="ID", font=("Arial Bold", 14), fill="#000000", anchor="w")
-        self.canvas.create_text(300.0, 352.0, text="PW", font=("Arial Bold", 14), fill="#000000", anchor="w")
+        self.canvas.create_text(305.0, 297.0, text="ID", font=self.maple_font, fill="#000000", anchor="w")
+        self.canvas.create_text(300.0, 352.0, text="PW", font=self.maple_font, fill="#000000", anchor="w")
 
         # 로그인 버튼 이미지 로드 및 설정
         self.login_normal_image = Image.open("로그인일반.png")

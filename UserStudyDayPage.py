@@ -1,5 +1,5 @@
 import tkinter as tk
-from tkinter import messagebox, ttk
+from tkinter import messagebox, ttk, font as tkFont  # tkFont 임포트 추가
 import mysql.connector
 import sys
 from Util import Util
@@ -19,6 +19,7 @@ class DayStudy(tk.Tk):
         self.words_per_page = 12  # 한 페이지당 단어 수, 초기값 설정
         self.current_word_page = 0  # 현재 단어 페이지
         self.wordday = 0  # 사용자 단어일 초기값
+        self.selected_day = None  # 선택한 일자 초기값 추가
         self.create_widgets()
         self.update_progress_bar()
         self.protocol("WM_DELETE_WINDOW", self.OnClosing)
@@ -46,6 +47,10 @@ class DayStudy(tk.Tk):
                         padding=0,  # 패딩을 0으로 설정
                         background="#FFFFFF",  # 배경색 제거
                         relief="flat")  # 테두리 제거
+        style.configure("Selected.TButton",
+                padding=0,
+                background="#FFFFFF",  # 선택된 버튼 색상 설정
+                relief="flat")
 
         self.back_button = self.create_image_button(
             normal_image_path="이전으로일반.png",
@@ -58,11 +63,17 @@ class DayStudy(tk.Tk):
         self.buttons_frame = tk.Frame(self, bg="#FFFFFF")
         self.buttons_frame.place(x=25, y=90)
 
-        self.day_label = tk.Label(self, text="학습 일자를 선택하세요", font=("Helvetica", 16), bg="#FFFFFF")
+        # 메이플스토리 폰트 로드
+        self.maple_font_16_bold = tkFont.Font(family="Maplestory", size=16, weight="bold")
+        self.maple_font_15_bold = tkFont.Font(family="Maplestory", size=15, weight="bold")
+        self.maple_font_13_bold = tkFont.Font(family="Maplestory", size=13, weight="bold")
+        self.maple_font_14 = tkFont.Font(family="Maplestory", size=14)
+
+        self.day_label = tk.Label(self, text="학습 일자를 선택하세요", font=self.maple_font_16_bold, bg="#FFFFFF")
         self.day_label.place(x=70, y=45)
 
-        self.bar_label = tk.Label(self, text="진도율", font=("Helvetica", 12), bg="#FFFFFF")
-        self.bar_label.place(x=145, y=285)
+        self.bar_label = tk.Label(self, text="일별 학습률", font=self.maple_font_13_bold, bg="#FFFFFF")
+        self.bar_label.place(x=135, y=285)
         
         self.progress_bar = ttk.Progressbar(self, orient="horizontal", length=300, mode='determinate', maximum=100)
         self.progress_bar.place(x=25, y=310)
@@ -152,7 +163,7 @@ class DayStudy(tk.Tk):
             gendate = gendate.date()
 
         today = datetime.date.today()
-        days_since_gendate = (today - gendate).days
+        days_since_gendate = (today - gendate).days + 1
 
         # Limit wordday to days_since_gendate
         if wordday > days_since_gendate:
@@ -183,19 +194,18 @@ class DayStudy(tk.Tk):
             for c in range(cols):
                 try:
                     day = next(day_iter)[0]
-                    btn = ttk.Button(self.buttons_frame, text=f"{day+1}", command=lambda d=day: self.select_day(d), width=7, style="TButton")
-                    if day < self.wordday:  # 수정된 부분: day < self.wordday
+                    btn = ttk.Button(self.buttons_frame, text=f"{day}", command=lambda d=day: self.select_day(d), width=7, style="TButton")
+                    if day <= self.wordday:  # 수정된 부분: day <= self.wordday
                         btn.state(['!disabled'])  # Enable button if within wordday limit
                     else:
                         btn.state(['disabled'])  # Disable button if beyond wordday limit
+                    if self.selected_day is not None and day == self.selected_day:  # 선택한 일자 강조
+                        btn.configure(style="Selected.TButton")
                     btn.grid(row=r, column=c, padx=1, pady=1)
                 except StopIteration:
                     break
 
         self.update_navigation_buttons()
-
-
-
 
 
     def update_navigation_buttons(self):
@@ -222,9 +232,12 @@ class DayStudy(tk.Tk):
 
     def select_day(self, day):
         self.current_day = day
-        self.day_label.config(text=f"{day+1}일차 단어 학습")
+        self.selected_day = day  # 현재 선택한 일자를 저장
+        self.day_label.config(text=f"{day}일차 단어 학습")
+        self.day_label.place(x=100,y=45)
         self.current_word_page = 0  # 일자 선택 시 단어 페이지 초기화
-        self.load_words(day+1)  # 수정된 부분: day+1 전달
+        self.load_words(day)  # 수정된 부분: day + 1 전달
+        self.update_day_buttons()  # 선택한 일자를 강조하기 위해 버튼 스타일 업데이트
 
     def load_words(self, day):
         cursor = self.connection.cursor()
@@ -320,3 +333,4 @@ if __name__ == "__main__":
     user_id = sys.argv[1] if len(sys.argv) > 1 else 'default_user'
     app = DayStudy(user_id)
     app.mainloop()
+

@@ -2,7 +2,8 @@ import mysql.connector
 import tkinter as tk
 from tkinter import ttk
 from tkinter import font as tkFont
-from PIL import Image, ImageTk
+from PIL import Image, ImageTk, ImageDraw
+from Util import Util
 import sys
 import os
 
@@ -13,6 +14,7 @@ class UserMainPage(tk.Tk):
         self.title("유저 메인 페이지")
         self.geometry("800x600")
         self.userID = userID
+        self.connection = Util.ConnectMysql()
         self.configure(bg="#023F94")  # 남색 배경
         self.resizable(False, False)
         
@@ -27,6 +29,21 @@ class UserMainPage(tk.Tk):
         # 배경 이미지 라벨 생성
         self.bg_label = tk.Label(self, image=self.bg_image)
         self.bg_label.place(x=-2, y=50, anchor="nw")
+
+        # 로고 이미지 로드 및 배경색 설정
+        self.logo_image = Image.open("로고이미지만.png").convert("RGBA")
+        self.logo_image = self.set_background_color(self.logo_image, "#023F94")
+        self.logo_image = self.logo_image.resize((50, 40), Image.Resampling.LANCZOS)
+        self.logo_photo = ImageTk.PhotoImage(self.logo_image)
+        self.logo_label = tk.Label(self, image=self.logo_photo, bg="#023F94")
+        self.logo_label.place(x=0, y=0)
+
+        # 로고 텍스트 이미지 로드
+        self.logo_text_image = Image.open("로고글자만.png")
+        self.logo_text_image = self.logo_text_image.resize((190, 28), Image.Resampling.LANCZOS)
+        self.logo_text_photo = ImageTk.PhotoImage(self.logo_text_image)
+        self.logo_text_label = tk.Label(self, image=self.logo_text_photo, bg="#023F94")
+        self.logo_text_label.place(x=50, y=8)
 
         # 사용자 사진 로드
         self.user_image = Image.open("사용자사진.png")
@@ -86,6 +103,12 @@ class UserMainPage(tk.Tk):
         # Update progress bars with data from the database
         self.update_progress1_bars()
         self.update_progress2_bars()
+        
+        self.protocol("WM_DELETE_WINDOW", self.OnClosing)
+        
+    def OnClosing(self):
+        Util.OnClosing(self.connection, self.userID)
+        self.destroy()
 
     def set_global_font(self):
         # Maplestory Light 폰트 설정
@@ -107,6 +130,11 @@ class UserMainPage(tk.Tk):
             # Register the font
             self.option_add("*TButton.Font", maplestory_font)
             self.option_add("*Font", maplestory_font)
+
+    def set_background_color(self, image, background_color):
+        background = Image.new('RGBA', image.size, background_color)
+        background.paste(image, (0, 0), image)
+        return background
 
     def get_user_nickname(self):
         # 데이터베이스 연결
@@ -239,4 +267,3 @@ if __name__ == "__main__":
     userID = sys.argv[1] if len(sys.argv) > 1 else 'default_user'
     app = UserMainPage(userID)
     app.mainloop()
-

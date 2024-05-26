@@ -1,5 +1,5 @@
 import tkinter as tk
-from tkinter import messagebox, ttk
+from tkinter import messagebox, ttk, font as tkFont
 import mysql.connector
 import sys
 from Util import Util
@@ -20,7 +20,15 @@ class LevelExam(tk.Tk):
         self.current_test_page = 0
         self.time_remaining = 600
         self.timer_id = None
+        self.user_level = self.get_user_level()
+
+        # 메이플스토리 폰트 로드
+        self.maple_font_16_bold = tkFont.Font(family="Maplestory", size=16, weight="bold")
+        self.maple_font_14_bold = tkFont.Font(family="Maplestory", size=14, weight="bold")
+
         self.create_widgets()
+        self.load_images()
+        self.configure_level_options()
         self.protocol("WM_DELETE_WINDOW", self.OnClosing)
         
     def OnClosing(self):
@@ -39,6 +47,30 @@ class LevelExam(tk.Tk):
             messagebox.showerror("Database Connection Error", f"An error occurred: {err}")
             self.destroy()
 
+    def get_user_level(self):
+        try:
+            cursor = self.connection.cursor()
+            query = "SELECT level FROM user WHERE id = %s"
+            cursor.execute(query, (self.user,))
+            result = cursor.fetchone()
+            cursor.close()
+            return result[0] if result else 0
+        except mysql.connector.Error as err:
+            messagebox.showerror("Database Query Error", f"An error occurred: {err}")
+            self.destroy()
+
+    def update_user_level(self, increment):
+        try:
+            new_level = self.user_level + increment
+            cursor = self.connection.cursor()
+            query = "UPDATE user SET level = %s WHERE id = %s"
+            cursor.execute(query, (new_level, self.user))
+            self.connection.commit()
+            cursor.close()
+            self.user_level = new_level
+        except mysql.connector.Error as err:
+            messagebox.showerror("Database Update Error", f"An error occurred: {err}")
+
     def create_widgets(self):
         self.back_button = self.create_image_button(
             "이전으로일반.png", "이전으로호버.png",
@@ -47,8 +79,8 @@ class LevelExam(tk.Tk):
         )
         self.back_button.place(x=25, y=10)
 
-        self.level_label = tk.Label(self, text="Level을 선택해!", font=("Helvetica", 16), bg="#FFFFFF")
-        self.level_label.place(x=60, y=150)
+        self.level_label = tk.Label(self, text="난이도를 선택해!", font=self.maple_font_16_bold, bg="#FFFFFF")
+        self.level_label.place(x=70, y=150)
 
         self.level_var = tk.StringVar(value="하")
         self.level_dropdown = ttk.Combobox(self, textvariable=self.level_var, values=["하", "중", "상"], state="readonly", font=("Helvetica", 12))
@@ -67,13 +99,12 @@ class LevelExam(tk.Tk):
         self.canvas.pack(side="left", fill="both", expand=True)
         self.scrollbar.pack(side="right", fill="y")
 
-        self.load_sumoongi_image()
         self.start_button = self.create_image_button(
             "시험시작일반.png", "시험시작호버.png", self.start_test, 1.0
         )
-        self.start_button.place(x=130, y=310)
+        self.start_button.place(x=130, y=307)
 
-        self.timer_label = tk.Label(self, text="남은시간: 10분 00초", font=("Helvetica", 16), bg="#FFFFFF")
+        self.timer_label = tk.Label(self, text="남은시간: 10분 00초", font=self.maple_font_16_bold, bg="#FFFFFF")
         self.timer_label.place_forget()
         self.end_button = self.create_image_button(
             "시험종료일반.png", "시험종료호버.png", self.finish_test, 1.0
@@ -89,15 +120,31 @@ class LevelExam(tk.Tk):
         self.prev_test_button.place_forget()
         self.next_test_button.place_forget()
         
-        self.load_level_image()
-        self.load_image("시험진행도.png")
-        self.level_label.tkraise()
+        self.level_label.tkraise()  # 라벨을 최상위 레벨로 올림
+
+    def configure_level_options(self):
+        self.level_dropdown.config(values=["하", "중", "상"])
+        self.level_var.set("하")
 
     def update_level_label(self, event=None):
         selected_level = self.level_var.get()
-        self.level_label.config(text=f"{selected_level} Level을 선택!", font=("Helvetica", 16), bg="#FFFFFF")
+
+        # 접근 제한 로직
+        if (selected_level == "중" and self.user_level < 400) or (selected_level == "상" and self.user_level < 700):
+            messagebox.showinfo("제한", "현재 레벨에서 접근할 수 없는 난이도입니다.")
+            self.level_var.set("하")  # 다시 "하"로 설정
+            return  # 선택을 취소하고 함수 종료
+
+        self.level_label.config(text=f"{selected_level} 난이도를 선택했어!", font=self.maple_font_16_bold, bg="#FFFFFF")
         self.level_label.place(x=50, y=150)
-        
+        self.level_label.tkraise()  # 라벨을 최상위 레벨로 올림
+
+    def load_images(self):
+        self.load_level_image()
+        self.load_sumoongi_image()
+        self.load_image("시험진행도.png")
+        self.level_label.tkraise()  # 이미지 로드 후 라벨을 최상위 레벨로 올림
+
     def load_level_image(self):
         image = Image.open("수준선택수뭉이.png")
         resized_image = image.resize((320, 182), Image.Resampling.LANCZOS)
@@ -132,11 +179,13 @@ class LevelExam(tk.Tk):
 
     def start_test(self):
         selected_level = self.level_var.get()
-        self.level_label.config(text=f"{selected_level} Level을 선택했어!", bg="#FFFFFF")
-        self.level_label.place(x=38, y=150)  # 레이블의 위치를 조정
+        self.level_label.config(text=f"{selected_level} 난이도를 선택했어!", bg="#FFFFFF", font=self.maple_font_16_bold)
+        self.level_label.place(x=50, y=150)  # 레이블의 위치를 조정
+        self.level_label.tkraise()  # 라벨을 최상위 레벨로 올림
         self.sumoongi_canvas.place_forget()
         self.start_button.place_forget()
         self.timer_label.place(x=75, y=310)
+        self.timer_label.tkraise()  # 타이머 라벨을 최상위 레벨로 올림
         self.end_button.place(x=600, y=556)
         self.prev_test_button.place(x=400, y=556)
         self.next_test_button.place(x=500, y=556)
@@ -222,6 +271,18 @@ class LevelExam(tk.Tk):
         score_message = f"점수 : {len(self.test_words) - len(incorrect_words)}/{len(self.test_words)}"
         messagebox.showinfo("시험 종료", score_message)
 
+        correct_count = len(self.test_words) - len(incorrect_words)
+        pass_percentage = correct_count / len(self.test_words)
+
+        if pass_percentage >= 0.1:
+            if self.level_var.get() == "하":
+                self.update_user_level(30)
+            elif self.level_var.get() == "중":
+                self.update_user_level(45)
+            elif self.level_var.get() == "상":
+                self.update_user_level(60)
+            messagebox.showinfo("시험 통과", "축하합니다! 시험에 통과하였습니다.")
+
         for widget in self.scrollable_frame.winfo_children():
             widget.destroy()
 
@@ -251,7 +312,6 @@ class LevelExam(tk.Tk):
             "결과확인일반.png", "결과확인호버.png", self.reset_to_initial, 1.0
         )
         self.result_confirm_button.place(x=350, y=560)
-        
 
     def load_result_sumoongi_image(self):
         image = Image.open("결과확인수뭉이.png")
@@ -268,16 +328,18 @@ class LevelExam(tk.Tk):
         self.load_image("시험진행도.png")
         for widget in self.scrollable_frame.winfo_children():
             widget.destroy()
-        self.level_label.config(text="Level을 선택해!")
+        self.user_level = self.get_user_level()  # 시험 후에 최신 레벨을 다시 가져옵니다.
+        self.level_label.config(text="난이도를 선택해!", font=self.maple_font_16_bold, bg="#FFFFFF")
         self.level_dropdown.place(x=40, y=80)
         self.level_label.place(x=60, y=150)  # 레이블 위치 복귀
         self.sumoongi_canvas.place(x=400, y=150)
         self.start_button.place(x=130, y=310)
+        self.level_label.tkraise()
 
     def stop_test_and_go_back(self):
         self.reset_timer()
         self.finish_test()
-        Util.SwitchPage(self, "UserMainPage", self.user)
+        self.SwitchToUserMainPage()
         
     def load_image(self, image_path):
         self.canvas_img = tk.Canvas(self, width=300, height=200, bg='white', highlightthickness=0)

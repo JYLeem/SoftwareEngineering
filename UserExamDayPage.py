@@ -1,9 +1,10 @@
 import tkinter as tk
-from tkinter import ttk, messagebox
+from tkinter import ttk, messagebox, font as tkFont
 import mysql.connector
 import sys
 from Util import Util
 from PIL import Image, ImageTk
+import datetime
 
 class DayExam(tk.Tk):
     def __init__(self, user):
@@ -23,7 +24,13 @@ class DayExam(tk.Tk):
         self.current_test_page = 0
         self.time_remaining = 600
         self.timer_id = None
-        self.sumoongi_image = None
+        self.wordday = 0
+        self.load_user_data()
+
+        # 메이플스토리 폰트 로드
+        self.maple_font_16_bold = tkFont.Font(family="Maplestory", size=16, weight="bold")
+        self.maple_font_15_bold = tkFont.Font(family="Maplestory", size=15, weight="bold")
+
         self.create_widgets()
         self.protocol("WM_DELETE_WINDOW", self.OnClosing)
         
@@ -43,13 +50,26 @@ class DayExam(tk.Tk):
             messagebox.showerror("Database Connection Error", f"An error occurred: {err}")
             self.destroy()
 
+    def load_user_data(self):
+        cursor = self.connection.cursor()
+        cursor.execute("SELECT wordday, gendate FROM user WHERE id = %s", (self.user,))
+        user_data = cursor.fetchone()
+        cursor.close()
+        if user_data:
+            self.wordday, gendate = user_data[0], user_data[1]
+            if isinstance(gendate, datetime.datetime):
+                gendate = gendate.date()
+            self.days_since_gendate = (datetime.date.today() - gendate).days + 1
+        else:
+            self.wordday = 0
+            self.days_since_gendate = 0
+
     def create_widgets(self):
-        # ttk 스타일 설정
         style = ttk.Style()
         style.configure("TButton",
-                        padding=0,  # 패딩을 0으로 설정
-                        background="#FFFFFF",  # 배경색 제거
-                        relief="flat")  # 테두리 제거
+                        padding=0,
+                        background="#FFFFFF",
+                        relief="flat")
         
         self.back_button = self.create_image_button(
             "이전으로일반.png", "이전으로호버.png",
@@ -57,14 +77,16 @@ class DayExam(tk.Tk):
             scale=0.8
         )
         self.back_button.place(x=25, y=10)
+        
         self.buttons_frame = tk.Frame(self, bg="#FFFFFF")
         self.buttons_frame.place(x=25, y=90)
-        self.day_label = tk.Label(self, text="먼저 날짜를 선택하세요", font=("Helvetica", 16), bg="#FFFFFF")
+        
+        self.day_label = tk.Label(self, text="먼저 날짜를 선택하세요", font=self.maple_font_16_bold, bg="#FFFFFF")
         self.day_label.place(x=70, y=45)
-
+        
         self.exam_frame_container = tk.Frame(self, bg="#FFFFFF", highlightbackground="black", highlightthickness=1)
         self.exam_frame_container.place(x=350, y=35, width=425, height=515)
-
+        
         self.canvas = tk.Canvas(self.exam_frame_container, bg="#FFFFFF")
         self.scrollbar = tk.Scrollbar(self.exam_frame_container, orient="vertical", command=self.canvas.yview)
         self.scrollable_frame = tk.Frame(self.canvas, bg="#FFFFFF")
@@ -73,20 +95,21 @@ class DayExam(tk.Tk):
         self.canvas.configure(yscrollcommand=self.scrollbar.set)
         self.canvas.pack(side="left", fill="both", expand=True)
         self.scrollbar.pack(side="right", fill="y")
-
+        
         self.load_sumoongi_image()
+        
         self.start_button = self.create_image_button(
             "시험시작일반.png", "시험시작호버.png", self.start_test, 1.0
         )
-        self.start_button.place(x=130, y=310)
-
-        self.timer_label = tk.Label(self, text="남은시간: 10분 00초", font=("Helvetica", 16), bg="#FFFFFF")
+        self.start_button.place(x=130, y=307)
+        
+        self.timer_label = tk.Label(self, text="남은시간: 10분 00초", font=self.maple_font_16_bold, bg="#FFFFFF")
         self.timer_label.place_forget()
         self.end_button = self.create_image_button(
             "시험종료일반.png", "시험종료호버.png", self.finish_test, 1.0
         )
         self.end_button.place_forget()
-
+        
         self.day_prev_button = self.create_image_button(
             "이전버튼일반.png", "이전버튼호버.png", self.prev_day_page, 1.0
         )
@@ -95,7 +118,7 @@ class DayExam(tk.Tk):
         )
         self.day_prev_button.place(x=25, y=250)
         self.day_next_button.place(x=260, y=250)
-
+        
         self.prev_test_button = self.create_image_button(
             "이전버튼일반.png", "이전버튼호버.png", self.prev_test_page, 1.0
         )
@@ -104,7 +127,7 @@ class DayExam(tk.Tk):
         )
         self.prev_test_button.place_forget()
         self.next_test_button.place_forget()
-
+        
         self.load_image("시험진행도.png")
         self.load_day_buttons()
         self.update_day_navigation_buttons()
@@ -155,8 +178,12 @@ class DayExam(tk.Tk):
             for c in range(cols):
                 try:
                     day = next(day_iter)[0]
-                    btn = ttk.Button(self.buttons_frame, text=f"{day+1}", command=lambda d=day: self.select_day(d), width=7, style="TButton")
-                    btn.grid(row=r, column=c, padx=1, pady=1)  # 버튼 간의 간격을 없앰
+                    btn = ttk.Button(self.buttons_frame, text=f"{day}", command=lambda d=day: self.select_day(d), width=7, style="TButton")
+                    if day <= self.wordday and day <= self.days_since_gendate:
+                        btn.state(['!disabled'])
+                    else:
+                        btn.state(['disabled'])
+                    btn.grid(row=r, column=c, padx=1, pady=1)
                 except StopIteration:
                     break
         self.update_day_navigation_buttons()
@@ -194,11 +221,12 @@ class DayExam(tk.Tk):
 
     def select_day(self, day):
         self.current_day = day
-        self.day_label.config(text=f"{day+1}일차 시험 준비")
+        self.day_label.config(text=f"{day}일차 시험 준비")
+        self.day_label.place(x=100, y=45)
 
     def start_test(self):
-        if not self.current_day:
-            messagebox.showinfo("Select Day", "Please select a day first!")
+        if self.current_day is None:
+            messagebox.showinfo("날짜 선택 오류", "먼저 날짜를 선택하세요")
             return
         self.sumoongi_canvas.place_forget()
         self.start_button.place_forget()
@@ -278,15 +306,23 @@ class DayExam(tk.Tk):
 
     def finish_test(self):
         self.reset_timer()
-        self.timer_label.place_forget()  # 타이머 라벨 숨김
+        self.timer_label.place_forget()
 
-        # 기존 이미지 숨기고 새로운 이미지 표시
         self.canvas_img.place_forget()
         self.load_result_sumoongi_image()
 
         incorrect_words = [(spell, mean) for i, (spell, mean) in enumerate(self.test_words) if self.entry_vars[i].get().strip().lower() != spell.lower()]
-        score_message = f"점수 : {len(self.test_words) - len(incorrect_words)}/{len(self.test_words)}"
+        score = len(self.test_words) - len(incorrect_words)
+        score_message = f"점수 : {score}/{len(self.test_words)}"
         messagebox.showinfo("시험 종료", score_message)
+
+        if score / len(self.test_words) >= 0.1 and self.wordday < self.days_since_gendate:
+            self.wordday += 1
+            cursor = self.connection.cursor()
+            cursor.execute("UPDATE user SET wordday = %s WHERE id = %s", (self.wordday, self.user))
+            self.connection.commit()
+            cursor.close()
+            messagebox.showinfo("축하합니다!", f"다음 일자가 열렸습니다! 현재 일자: {self.wordday}일차")
 
         for widget in self.scrollable_frame.winfo_children():
             widget.destroy()
@@ -313,7 +349,6 @@ class DayExam(tk.Tk):
         self.next_test_button.place_forget()
         self.end_button.place_forget()
 
-        # 결과 확인 버튼 이미지 적용
         self.result_confirm_button = self.create_image_button(
             "결과확인일반.png", "결과확인호버.png", self.reset_to_initial, 1.0
         )
@@ -326,19 +361,19 @@ class DayExam(tk.Tk):
         self.result_sumoongi_canvas = tk.Canvas(self, width=200, height=200, bg='white', highlightthickness=0)
         self.result_sumoongi_canvas.create_image(100, 100, image=photo, anchor=tk.CENTER)
         self.result_sumoongi_canvas.image = photo
-        self.result_sumoongi_canvas.place(x=85, y=310)  # Same position as the original image
+        self.result_sumoongi_canvas.place(x=85, y=310)
 
     def reset_to_initial(self):
         self.result_confirm_button.place_forget()
         self.result_sumoongi_canvas.place_forget()
-        self.load_image("시험진행도.png")  # Load the original image again
+        self.load_image("시험진행도.png")
         for widget in self.scrollable_frame.winfo_children():
             widget.destroy()
         self.day_label.config(text="먼저 날짜를 선택하세요")
+        self.day_label.place(x=70, y=45)
         self.load_day_buttons()
         self.sumoongi_canvas.place(x=400, y=150)
         self.start_button.place(x=130, y=310)
-
 
     def stop_test_and_go_back(self):
         
